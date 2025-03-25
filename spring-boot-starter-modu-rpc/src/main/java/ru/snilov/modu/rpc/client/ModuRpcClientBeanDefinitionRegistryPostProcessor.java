@@ -63,6 +63,8 @@ public class ModuRpcClientBeanDefinitionRegistryPostProcessor implements BeanDef
                     .filter(Class::isInterface)
                     .collect(Collectors.toSet());
 
+            ModuRpcClientMethodInterceptor interceptor = applicationContext.getBean(ModuRpcClientMethodInterceptor.class);
+
             for (Class<?> apiInterface : rpcApiInterfaces) {
                 if (hasImplementation(registry, apiInterface)) {
                     continue;
@@ -77,6 +79,10 @@ public class ModuRpcClientBeanDefinitionRegistryPostProcessor implements BeanDef
                 beanDefinition.setBeanClass(ModuRpcClientFactoryBean.class);
                 beanDefinition.getConstructorArgumentValues().addGenericArgumentValue(apiInterface);
                 beanDefinition.getConstructorArgumentValues().addGenericArgumentValue(urlMap.get(apiInterface.getPackageName()));
+                beanDefinition.getConstructorArgumentValues().addGenericArgumentValue(interceptor);
+
+                // Помечаем информацией, что это сгенерированный бин
+                beanDefinition.setAttribute("rpc.client", true);
 
                 registry.registerBeanDefinition(apiInterface.getSimpleName(), beanDefinition);
                 logger.info("registered rpc client for [{}]", apiInterface.getName());
@@ -84,6 +90,7 @@ public class ModuRpcClientBeanDefinitionRegistryPostProcessor implements BeanDef
         }
     }
 
+    // Определение пакета от класса аннотированный SpringBootApplication
     private String getBasePackage(ApplicationContext context) {
         if (context != null) {
             for (String beanName : context.getBeanDefinitionNames()) {
@@ -98,6 +105,7 @@ public class ModuRpcClientBeanDefinitionRegistryPostProcessor implements BeanDef
         return null;
     }
 
+    // Пользователь может указать дополнительные пакеты для сканирования
     private List<String> getExtraScanPackages() {
         String property = environment.getProperty("rpc.scan.packages");
         if (property == null) {
@@ -110,6 +118,7 @@ public class ModuRpcClientBeanDefinitionRegistryPostProcessor implements BeanDef
                 .toList();
     }
 
+    // Добываем из переменных окружений URL назначения запроса
     private Map<String, String> getPropertiesByPattern(String propertyBaseName, String suffix) {
         Binder binder = Binder.get(environment);
         return binder.bind(propertyBaseName, Bindable.mapOf(String.class, String.class))

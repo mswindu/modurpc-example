@@ -39,8 +39,8 @@ public class ModuRpcClientBeanDefinitionRegistryPostProcessor implements BeanDef
     @Override
     public void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry) throws BeansException {
         if (applicationContext != null) {
-            // Получаем доступ к свойствам rpc.clients
-            Map<String, String> urlMap = getPropertiesByPattern("rpc.clients", ".url");
+            // Получаем доступ к свойствам modurpc.clients
+            Map<String, String> urlMap = getPropertiesByPattern("modurpc.clients", ".url");
 
             String basePackage = getBasePackage(applicationContext);
             List<String> extraPackages = getExtraScanPackages();
@@ -71,7 +71,7 @@ public class ModuRpcClientBeanDefinitionRegistryPostProcessor implements BeanDef
                 }
 
                 if (!urlMap.containsKey(apiInterface.getPackageName())) {
-                    throw new IllegalArgumentException("Url for interface [%s] not found. Please set [rpc.clients.%s.url] in application.properties"
+                    throw new IllegalArgumentException("Url for interface [%s] not found. Please set [modurpc.clients.%s.url] in application.properties"
                             .formatted(apiInterface.getName(), apiInterface.getPackageName()));
                 }
 
@@ -82,7 +82,7 @@ public class ModuRpcClientBeanDefinitionRegistryPostProcessor implements BeanDef
                 beanDefinition.getConstructorArgumentValues().addGenericArgumentValue(interceptor);
 
                 // Помечаем информацией, что это сгенерированный бин
-                beanDefinition.setAttribute("rpc.client", true);
+                beanDefinition.setAttribute("modurpc.client", true);
 
                 registry.registerBeanDefinition(apiInterface.getSimpleName(), beanDefinition);
                 logger.info("registered rpc client for [{}]", apiInterface.getName());
@@ -101,13 +101,13 @@ public class ModuRpcClientBeanDefinitionRegistryPostProcessor implements BeanDef
             }
         }
 
-        logger.warn("Cannot determine base package. Please specify 'rpc.scan.packages' manually.");
+        logger.warn("Cannot determine base package. Please specify 'modurpc.scan.packages' manually.");
         return null;
     }
 
     // Пользователь может указать дополнительные пакеты для сканирования
     private List<String> getExtraScanPackages() {
-        String property = environment.getProperty("rpc.scan.packages");
+        String property = environment.getProperty("modurpc.scan.packages");
         if (property == null) {
             return List.of();
         }

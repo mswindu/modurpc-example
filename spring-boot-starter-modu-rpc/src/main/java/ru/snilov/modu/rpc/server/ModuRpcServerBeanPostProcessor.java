@@ -39,7 +39,7 @@ public class ModuRpcServerBeanPostProcessor implements BeanPostProcessor, Applic
         // Пропускаем сгенерированные клиенты для RPC
         if (registry.containsBeanDefinition(beanName)) {
             BeanDefinition beanDefinition = registry.getBeanDefinition(beanName);
-            Object isRpcClient = beanDefinition.getAttribute("rpc.client");
+            Object isRpcClient = beanDefinition.getAttribute("modurpc.client");
             if (Boolean.TRUE.equals(isRpcClient)) {
                 return bean;
             }

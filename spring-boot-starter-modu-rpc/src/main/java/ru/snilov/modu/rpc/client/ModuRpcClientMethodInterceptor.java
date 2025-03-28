@@ -1,5 +1,7 @@
 package ru.snilov.modu.rpc.client;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cglib.proxy.Enhancer;
 import org.springframework.cglib.proxy.MethodInterceptor;
@@ -18,8 +20,11 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.TimeUnit;
 
 public class ModuRpcClientMethodInterceptor implements MethodInterceptor {
+    private static final Logger logger = LoggerFactory.getLogger(ModuRpcClientMethodInterceptor.class);
+
     private final HttpClient httpClient;
     private final ModuRpcSerializer javaSerializer;
 
@@ -51,7 +56,14 @@ public class ModuRpcClientMethodInterceptor implements MethodInterceptor {
                     .header("Content-Type", "application/octet-stream")
                     .method("POST", HttpRequest.BodyPublishers.ofByteArray(javaSerializer.serialize(moduRpcRequest)));
 
+            long startTime = System.nanoTime();
+
             HttpResponse<byte[]> response = httpClient.send(requestBuilder.build(), HttpResponse.BodyHandlers.ofByteArray());
+
+            long endTime = System.nanoTime();
+            long durationMicros = TimeUnit.NANOSECONDS.toMicros(endTime - startTime);
+            logger.debug("response time: {} microseconds", durationMicros);
+            logger.debug("protocol version [{}]", response.version());
 
             if (response.statusCode() != 200) {
                 throw new ModuRpcTransportException("RPC request failed with status: " + response.statusCode());

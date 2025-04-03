@@ -3,6 +3,9 @@ package ru.snilov.modu.rpc.server;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import ru.snilov.modu.rpc.context.ModuRpcContext;
 import ru.snilov.modu.rpc.data.ModuRpcRequest;
 import ru.snilov.modu.rpc.data.ModuRpcResponse;
 import ru.snilov.modu.rpc.serializer.ModuRpcSerializer;
@@ -12,8 +15,11 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.UUID;
 
 public class ModuRpcDispatcherServlet extends HttpServlet {
+    private static final Logger logger = LoggerFactory.getLogger(ModuRpcDispatcherServlet.class);
+
     private final HandlerRegistry handlerRegistry;
     private final ModuRpcSerializer javaSerializer;
 
@@ -33,6 +39,16 @@ public class ModuRpcDispatcherServlet extends HttpServlet {
         String[] parts = pathInfo.split("/");
         String className = parts[1];
         String methodName = parts[2];
+
+        // Получаем RPC контекст из заголовков
+        String requestChainId = req.getHeader("X-MODURPC-Request-Chain-ID");
+        String depthStr = req.getHeader("X-MODURPC-Depth");
+
+        ModuRpcContext context = ModuRpcContext.getCurrent();
+        context.setRequestChainId(requestChainId != null ? requestChainId : UUID.randomUUID().toString());
+        context.setDepth(depthStr != null ? Integer.parseInt(depthStr) : 0);
+
+        logger.debug("invoke method [{}.{}] with context [{}]", className, methodName, context);
 
         try (InputStream inputStream = req.getInputStream()) {
             byte[] requestBody = inputStream.readAllBytes();
@@ -61,6 +77,8 @@ public class ModuRpcDispatcherServlet extends HttpServlet {
             handleException(resp, e.getCause());
         } catch (Exception e) {
             handleException(resp, e);
+        } finally {
+            ModuRpcContext.clear();
         }
     }
 
@@ -80,3 +98,4 @@ public class ModuRpcDispatcherServlet extends HttpServlet {
         }
     }
 }
+

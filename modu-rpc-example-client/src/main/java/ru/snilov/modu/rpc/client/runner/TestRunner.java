@@ -8,8 +8,10 @@ import org.springframework.stereotype.Component;
 import ru.snilov.api.rpc.ClientApi;
 import ru.snilov.api.rpc.exception.CustomException;
 import ru.snilov.modu.rpc.api.dto.PrimitiveDTO;
+import ru.snilov.modu.rpc.context.ModuRpcContext;
 
 import java.util.List;
+import java.util.UUID;
 
 @Component
 @Slf4j
@@ -23,6 +25,10 @@ public class TestRunner implements ApplicationRunner {
 
     @Override
     public void run(ApplicationArguments args) throws Exception {
+        UUID requestChainId = UUID.randomUUID();
+        ModuRpcContext context = ModuRpcContext.getCurrent();
+        context.setRequestChainId(requestChainId.toString());
+
         String ping = clientApi.ping();
         log.info(ping);
 
@@ -43,5 +49,8 @@ public class TestRunner implements ApplicationRunner {
         } catch (CustomException e) {
             log.error(e.getMessage());
         }
+
+        PrimitiveDTO result = clientApi.usePrimitive(Integer.valueOf(1), Long.valueOf(1L), Boolean.valueOf(false), Character.valueOf('a'), Double.valueOf(3.3));
+        log.info(result.toString());
     }
 }

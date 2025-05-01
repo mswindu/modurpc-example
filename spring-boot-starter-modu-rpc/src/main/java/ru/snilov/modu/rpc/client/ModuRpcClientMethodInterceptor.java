@@ -5,6 +5,7 @@ import org.springframework.cglib.proxy.Enhancer;
 import org.springframework.cglib.proxy.MethodInterceptor;
 import org.springframework.cglib.proxy.MethodProxy;
 import ru.snilov.modu.rpc.api.exception.ModuRpcTransportException;
+import ru.snilov.modu.rpc.context.ModuRpcContext;
 import ru.snilov.modu.rpc.data.ModuRpcRequest;
 import ru.snilov.modu.rpc.data.ModuRpcResponse;
 import ru.snilov.modu.rpc.serializer.ModuRpcSerializer;
@@ -16,6 +17,7 @@ import java.net.URISyntaxException;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -42,6 +44,11 @@ public class ModuRpcClientMethodInterceptor implements MethodInterceptor {
             throw new IllegalArgumentException("No URL configured for API [%s]".formatted(method.getDeclaringClass().getName()));
         }
 
+        // Получаем текущий контекст RPC
+        ModuRpcContext context = ModuRpcContext.getCurrent();
+        String requestChaintId = context.getRequestChainId() != null ? context.getRequestChainId() : UUID.randomUUID().toString();
+        String depth = String.valueOf(context.getDepth() + 1);
+
         String url = "%s/rpc/%s/%s".formatted(apiUrl, method.getDeclaringClass().getName(), method.getName());
         ModuRpcRequest moduRpcRequest = new ModuRpcRequest(args, method.getParameterTypes());
 
@@ -49,6 +56,8 @@ public class ModuRpcClientMethodInterceptor implements MethodInterceptor {
             HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
                     .uri(new URI(url))
                     .header("Content-Type", "application/octet-stream")
+                    .header("X-MODURPC-Request-Chain-ID", requestChaintId)
+                    .header("X-MODURPC-Depth", depth)
                     .method("POST", HttpRequest.BodyPublishers.ofByteArray(javaSerializer.serialize(moduRpcRequest)));
 
             HttpResponse<byte[]> response = httpClient.send(requestBuilder.build(), HttpResponse.BodyHandlers.ofByteArray());
